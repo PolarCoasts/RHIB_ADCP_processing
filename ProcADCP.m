@@ -40,8 +40,8 @@ adcp.config.yaw_offset=yaw_offset;
 
 %% Transform velocities into Earth coordinates and subtract vessel velocity
 angles=[-adcp.roll', -adcp.pitch', adcp.instrument_heading'];
-orientation=quaternion(angles,'eulerd','YXZ','frame');
-adcp=adcp_beam2earth(adcp,orientation,b5w=beam5_weight);
+adcp.I2Equat=quaternion(angles,'eulerd','YXZ','frame');
+adcp=adcp_beam2earth(adcp,adcp.I2Equat,b5w=beam5_weight);
 
 adcp.vel(:,1,:)=squeeze(adcp.vel(:,1,:))+adcp.vessel_vel(:,1)';
 adcp.vel(:,2,:)=squeeze(adcp.vel(:,2,:))+adcp.vessel_vel(:,2)';

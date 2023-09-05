@@ -30,10 +30,19 @@ The package contains the following functions and scripts:
         - **adcp_beam2earth**: transforms velocities from beam coordinates to Earth coordinates
     - **ClipAirTime**: identifies data collected while RHIB is out of water (based on low correlation and echo intensity) and clips it from the record - **can be run independently**
     - **PlotTrack**: plots the GPS track for the given deployment and colors it by time, if data is collected in/around LeConte Bay it also inserts a map of the bay showing where the data was collected - **can be run independently**
+        - **Draw_LeConteCoastline**: adds coastline to map of GPS track (if data is from LeConte). Also includes option to plot 8/28/2023 terminus line.
     - **PlotBeams**: plots raw beam data, user can select beam velocity, correlation, or echo intensity - **can be run independently**
     - **PlotENU**: plots rotated velocities and error velocity - **can be run independently**
 
-- **LoadDeployment**: this function is provided for user convenience, it is not used by RHIBproc. It displays a list of processed files in the current directory and the user enters the line number of the desired file to load the data. 
+- **LocateFeature**: top level script to display beam data in an interactive figure used to identify features in the time domain of individual beams and locate them in space. To be used after processing data.
+    - **LoadDeployment**: displays a list of processed files in the current directory and the user enters the line number of the desired file to load the data - **can be run independently**
+    - **rhib_earth2beam**: transforms rhib velocity from earth coordinates to beam coordinates for removing from beam velocity
+    - **beamlocations**: uses rhib heading and tilt, beam angles, and depth to calculate the location of each point of beam data
+    - **Draw_LeConteCoastine**: adds LeConte coastline to interactive map (if data is from LeConte). Also includes option to plot 8/28/2023 terminus line. 
+
+- Data files:
+    - Alaska_Coast_63360_In: coastline file
+    - LeConteTerminusAug282023: terminus line
 
 
 ## How to use RHIB_ADCP_processing
@@ -98,6 +107,10 @@ LoadDeployment provides a convenient way to look up filenames and load processed
 	
 This will display a numbered list of all processed files contained in the working directory (and subdirectories). Enter the line number of the desired file and the data is loaded into the adcp structure.
 
+### Identifying features in beam data and locating them in space
+LocateFeature is the top level script that will set up an interactive plot for identifying features. It will bring up a list of processed files to chose from (see above). After loading the data, it removes RHIB velocity from the beam velocities and calculates the actual location of each data point (based on tilt, heading, beam angle, and depth). A figure is displayed which enables the user to visually identify features of interest in the beam data and locate them in space by clicking on the time series. 
+
+The interactive figure is initially displayed with beam velocities for each beam (RHIB velocity has been removed) and a blank map. If data was collected at LeConte, the map will include the coastline local to the data collected and the 8/28/2023 terminus line, if selected and data was collected near the terminus. Select whether or not to include the terminus at the top of LocateFeature by setting addterm=1. Three buttons next to the beam data (just above the colorbar) allow the user to toggle between beam velocity, correlation, and echo intensity. The axes containing beam data are linked so that zooming in on one axes zooms all of them. The user can explore any of the beam data to visually identify features. A mouse click (as long as the zoom tool is not selected) on any point in the beam data will plot a red dot on the map at the location of that data point. Click on any dot to display its coordinates. Subsequent clicks on the beam data will add dots to the map. Press the "Clear Points" button to clear the map and begin again.
 
 ## Troubleshooting
 This section provides some workarounds in the event that it is discovered in the field that some requirements are missing
@@ -105,9 +118,9 @@ This section provides some workarounds in the event that it is discovered in the
 | Problem								| Workaround															|
 | :---									| :------------															|
 | using MATLAB release prior to R2019b		| Unfortunately there is no easy solution to this. Many of the functions are built with argument blocks. Those would need to be removed and defaults, validations, and optional inputs would need to be handled another way	|
-| missing Mapping/Navigation toolboxes		| In RHIBproc, comment out lines 107-109. This will skip plotting of the GPS track		|
-| missing m_map						| in ProcADCP, comment out lines 31 & 32. This will omit translating lat/lon to UTM x/y	|
-| missing cmocean						| In PlotBeams line 20 and PlotENU line 32, replace colormap						| 
+| missing Mapping/Navigation toolboxes		| In RHIBproc, comment out lines labeled %Map RHIB track (probably around line 110)		|
+| missing m_map					| In ProcADCP, comment out lines labeled %convert lat, lon to UTM (probably around line 30)	|
+| missing cmocean				| Select new colormap in PlotBeams (~line 20) and PlotENU (~line32)				| 
 
 
 
@@ -118,6 +131,6 @@ This section provides some workarounds in the event that it is discovered in the
 
 
 ## Credits
-The RHIB_ADCP_processing package is based heavily on the ROSE_code package developed by Dylan Winters. Many of the low level functions are nearly exactly as he wrote them. The current package represents an overhaul of the code framework by Bridget Ovall to update, simplify, consolidate, and debug the package. 
+The RHIB_ADCP_processing package is based heavily on the ROSE_code package developed by Dylan Winters. Many of the low level functions are nearly exactly as he wrote them. The current package represents an overhaul of the code framework by Bridget Ovall to update, simplify, consolidate, and debug the package. Additional capability was added for identifying features in beam data and locating them in space.
 
 

@@ -26,6 +26,8 @@ beam5_weight=1;
 overwrite=false;
 % automatically trim leading/trailing portion of record collected in air
 clipAir=true;
+% add 8/28/2023 terminus line to map
+addterm=1;
 % =======================================================================================
 
 % === Define ADCP offset for each instrument used =======================================
@@ -104,7 +106,7 @@ for i=1:length(rhibs)
             end
 
             % Map RHIB track
-            mapfig=PlotTrack(adcp);
+            mapfig=PlotTrack(adcp,addterm=addterm);
             exportgraphics(mapfig,plotpath+"map.png")
             close(mapfig)
 

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>LeConteTerminusAug282023.kmz</name>
+	<Placemark>
+		<ExtendedData>
+			<Data name="otherImageFlag">
+				<value>false</value>
+			</Data>
+			<Data name="notes">
+			</Data>
+			<Data name="pointLat">
+				<value>56.83828180312504</value>
+			</Data>
+			<Data name="Satellite">
+				<value>SENTINEL_2</value>
+			</Data>
+			<Data name="Time">
+				<value>20:09:06</value>
+			</Data>
+			<Data name="Date">
+				<value>2023-08-28</value>
+			</Data>
+			<Data name="partialPickFlag">
+				<value>false</value>
+			</Data>
+			<Data name="system:time_start">
+				<value>1693253346059</value>
+			</Data>
+			<Data name="SLCFlag">
+				<value>false</value>
+			</Data>
+			<Data name="pointLon">
+				<value>-132.35645603620273</value>
+			</Data>
+			<Data name="cloudShadowFlag">
+				<value>false</value>
+			</Data>
+			<Data name="ImagePath">
+				<value>COPERNICUS/S2/20230828T195901_20230828T200055_T08VPJ</value>
+			</Data>
+			<Data name="system:index">
+				<value>2_0_0</value>
+			</Data>
+		</ExtendedData>
+		<LineString>
+			<coordinates>
+				-132.3570139356778,56.84100478854346,0 -132.3577864118741,56.83987805997784,0 -132.3588163801358,56.83917383740324,0 -132.3588163801358,56.83875129749989,0 -132.3598463483976,56.83771840210351,0 -132.3612196394132,56.83767145163569,0 -132.3616487928556,56.83612205316668,0 -132.3623354383634,56.83518299258574,0 -132.3616487928556,56.83461954493225,0 -132.3606188245938,56.83457259057841,0 -132.3589880415128,56.83414999874422,0 -132.3583872266935,56.83377435755436,0 -132.358301396005,56.83325784476523,0 -132.3586447187589,56.83269436814234,0 -132.3598463483976,56.8322717551108,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+</Document>
+</kml>

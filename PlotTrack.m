@@ -5,6 +5,7 @@ arguments
     options.range (1,:) double=nan      % indices of data to plot (range has precedence over start/endtime)
     options.starttime=[]                % starting time of data to plot
     options.endtime=[]                  % ending time of data to plot
+    options.addterm logical=0           % set to 1 to plot Aug 28,2023 terminus line
 end
 
 % This function plots the GPS track from the given ADCP record
@@ -57,17 +58,32 @@ if minlon>-133 && maxlon<-132 && minlat>56 && maxlat<57
 else
     LC=0;
 end
+% don't plot terminus line if data is far from terminus, even if user has set it to be added
+if maxlat<56.83 || maxlon<-132.38
+    options.addterm=0;
+end
 
 % plot the figure
 fig=figure('Position',[10 10 1000 800]);
 ax=axes('Position',[.08 .08 .86 .88]);
 % For LeConte data, include coastline 
 if LC
-    Draw_LeConteCoastline
+    Draw_LeConteCoastline(options.addterm)
+    if options.addterm
+        if maxlat<56.84
+            maxlat=56.84;
+        end
+        if maxlon<-132.35
+            maxlon=-132.36;
+        end
+    end
     xbuff=(maxlon-minlon)*.2;
     ybuff=(maxlat-minlat)*.2;
     xlim([minlon-xbuff maxlon+xbuff])
     ylim([minlat-ybuff maxlat+ybuff])
+    if options.addterm
+        text(maxlon+xbuff,maxlat+ybuff,'Terminus as of 8/28/2023','FontSize',16,'HorizontalAlignment','right','VerticalAlignment','top')
+    end
 end
 hold on
 plot(lon(options.range),lat(options.range),'Color',[.5 .5 .5],'LineWidth',2)
