@@ -1,4 +1,4 @@
-function adcp=LoadDeployment
+function [adcp,xsect,ctd,folder,filepath]=LoadDeployment(basepath)
 
 % This function displays an numbered list of processed ADCP files in the working directory and its subdirectories
 % 
@@ -7,11 +7,11 @@ function adcp=LoadDeployment
 %
 % The user enters the line number for the desired file and it is loaded into the output structure
 
-files=dir('**/*.mat');
+files=dir([basepath '**/adcp_deploy_*.mat']);
+files(contains({files.name},'._'))=[];
 
 filenames={files.name};
 prompt="Enter the line number for the file you wish to load\n";
-% ii=listdlg('PromptString',prompt,'ListString',filenames,'ListSize',[300 100],'OKString','Load','SelectionMode','single');
 
 number=1:length(filenames);
 fS='%d %s\n';
@@ -25,7 +25,27 @@ if isempty(ii)
     return
 end
 
-filepath=fullfile(files(ii).folder,filenames{ii});
+folder={files(ii).folder};
+folder=[folder{:} '/'];
+filepath=fullfile(folder,filenames{ii});
 
 adcp=load(filepath);
 adcp=adcp.adcp;
+
+files=dir([folder '**/Sections_*.mat']);
+if ~isempty(files)
+    xsect=load(fullfile(files.folder,files.name));
+    xsect=xsect.Xsect;
+else
+    xsect=[];
+end
+
+ctdfolder=split(folder,'/');
+ctdfolder=string(join(ctdfolder(1:end-2),'/'));
+ctdfolder=[convertStringsToChars(ctdfolder) '/CTD/'];
+if exist(ctdfolder,'dir')
+    ctdfile=dir([ctdfolder '*.mat']);
+    load(fullfile(ctdfile.folder,ctdfile.name));
+else
+    ctd=[];
+end

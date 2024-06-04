@@ -1,4 +1,4 @@
-function data=ParseDeployment(rawfile,parse_nuc_timestamps)
+function data=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp)
 % This function parses data from raw IMU, ADCP, and GPS files. 
 % It is called by RHIBproc, but can also be used independently
 % usage:
@@ -7,9 +7,15 @@ function data=ParseDeployment(rawfile,parse_nuc_timestamps)
 
 % find all files in deployment folder    
 files.adcp = dir(fullfile(rawfile,'ADCP','*ADCP_timestamped*.bin'));
-files.gps = dir(fullfile(rawfile,'GPS','GPS_*.log'));
 files.imu = dir(fullfile(rawfile,'IMU','IMU_timestamped*.bin'));
 isNortek = all(startsWith({files.adcp.name},'Nortek'));
+
+% working on option to include nuc timestamps for GPS (not yet functional)
+if gps_timestamp
+    files.gps = dir(fullfile(rawfile,'GPS','GPS_timestamped*.log'));
+else
+    files.gps = dir(fullfile(rawfile,'GPS','GPS_2*.log'));
+end
 
 % establish structure to load with parsed data
 data=struct('adcp',[],'gps',[],'imu',[]);

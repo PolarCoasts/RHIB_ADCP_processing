@@ -1,6 +1,7 @@
 function adcp=ProcADCP(data,yaw_offset,vessel_vel_method,beam5_weight)
 % This function manages the processing of ADCP data, including transformation to earth coordinates and removal of RHIB velocity
 % It is called by RHIBproc, but can also be used independently
+% If the input adcp data has already been processed, this function will overwrite that by processing from beam velocities
 % usage:
 %   adcp = ProcADCP(data,yaw_offset,vessel_vel_method,beam5_weight)
 
@@ -12,11 +13,13 @@ if isfield(adcp,'nuc_time')
     adcp=nucRepair(adcp);
     time=adcp.nuc_time;
 else
-    time=adcp.time;
+    time=adcp.mtime;
 end
 
 % duplicate raw beam velocities to retain them after vel field gets overwritten
-adcp.bvel=adcp.vel;
+if ~isfield(adcp,'bvel')
+    adcp.bvel=adcp.vel;
+end
 
 %% Get vessel motion from GPS
 % velocity
@@ -35,6 +38,7 @@ m_proj('UTM','ellipsoid','wgs84','zone',zone)
 h=gps_line_interp(gps,'GPRMC','HEHDT','head','angular');
 [~,iu]=unique(gps.GPRMC.dn);
 adcp.vessel_heading=mod(180/pi*angle(interp1(gps.GPRMC.dn(iu),cosd(h(iu))+1i*sind(h(iu)),time)),360);
+adcp.turn_rate=abs(gradient(runmean(unwrap(adcp.vessel_heading*pi/180-pi),5,1)));
 adcp.instrument_heading=adcp.vessel_heading+yaw_offset;
 adcp.config.yaw_offset=yaw_offset;
 

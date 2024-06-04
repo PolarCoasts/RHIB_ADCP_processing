@@ -22,9 +22,9 @@ for i=1:nb
     fin(i,:)=[find(sumcorr>opt.binthresh,1,'last') find(sumecho>opt.binthresh,1,'last')];
 end
 
-% set the start and final times to earliest and latest good data, respectively
-startI=min(start,[],'all');
-finI=max(fin,[],'all');
+% set the start and final times based on the best agreement from all beams:
+startI=mode(start,'all');
+finI=mode(fin,'all');
 
 % trim record
 len=length(adcp.time);
@@ -37,7 +37,11 @@ for i=1:length(fn)
         elseif find(sz==len)==2
             adcp.(fn{i})=adcp.(fn{i})(:,startI:finI,:);
         elseif find(sz==len)==3
-            adcp.(fn{i})=adcp.(fn{i})(:,:,startI:finI);
+            if length(sz)==3
+                adcp.(fn{i})=adcp.(fn{i})(:,:,startI:finI);
+            elseif length(sz)==4
+                adcp.(fn{i})=adcp.(fn{i})(:,:,startI:finI,:);
+            end
         end
     end
 end

@@ -23,7 +23,9 @@ Iloc=permute(repmat(xyzoff,1,1,nb),[2 3 1]).*permute(repmat(dr,1,1,40),[3 2 1]);
 Iloc=permute(repmat(Iloc,1,1,1,nt),[1 2 4 3]); %packed as depth x beam x time x direction
 
 %% Convert to relative location in Earth coordinates 
-Eloc=rotatepoint(repelem(adcp.I2Equat,nc*nb),reshape(Iloc,nc*nb*nt,3));
+angles=[adcp.roll' adcp.pitch' -adcp.instrument_heading'];
+I2Equat=quaternion(angles,'eulerd','YXZ','point');
+Eloc=rotatepoint(repelem(I2Equat,nc*nb),reshape(Iloc,nc*nb*nt,3));
 Eloc=reshape(Eloc,nc,nb,nt,3);
 
 %% Add relative location to rhib location

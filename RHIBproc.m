@@ -6,18 +6,23 @@
 %       - Creates and saves some basic plots of initial data
 %
 % To run:
-%   - First, cd to data folder containing 'raw/' subfolder
+%   - First, cd to data folder containing 'raw/' subfolder OR set basepath to folder containing 'raw/'
 %   - Customize processing options in first section below
 %   - Enter serial numbers and offset angle for each ADCP 
 %   - Run script (You will be prompted to confirm serial numbers and offsets to continue)
 
 clear
 
+
 %% ** CUSTOMIZE PROCESSING DETAILS HERE **  
 
 % ========== Processing options =========================================================
+% set basepath to directory containing 'raw/' (leave empty to use working directory)
+basepath=[];
 % use nuc time
 parse_nuc_timestamps=true;
+% use nuc time for gps, too
+gps_timestamp=false;
 % how to handle ship motion
 vessel_vel_method = 'GPRMC groundspeed and course';
 % weighting for beam 5 in transforming to earth coordinates
@@ -28,11 +33,14 @@ overwrite=false;
 clipAir=true;
 % add 8/28/2023 terminus line to map
 addterm=1;
+% adjust offset angle when searching for good match
+test=0;
+offset_adj=-2;
 % =======================================================================================
 
 % === Define ADCP offset for each instrument used =======================================
 serial=[14158; 24653]; 
-offset=[45; 135];
+offset=[45; 133];
 % =======================================================================================
 
 %% Prompt user to confirm ADCP offsets
@@ -48,19 +56,21 @@ if userinfo~='y'
 end
 
 %% Define file structure and get list of existing files
+raw_dir=[basepath 'raw/'];             %directory containing raw data from UBOX
+if test==1
+    proc_dir=[basepath 'processed/adj_' num2str(offset_adj) '/'];
+    offset=offset+offset_adj;
+else
+    proc_dir=[basepath 'processed/'];      %directory for saving processed files
+end
 
-raw_dir='raw/';             %directory containing raw data from UBOX
-proc_dir='proc/ADCP/';      %directory for saving processed files
 if ~exist(raw_dir,'dir')
     error('No raw files exist in this directory. Please change directories.')
-end
-if ~exist(proc_dir,'dir')
-    mkdir(proc_dir)
 end
 
 % find subfolders for each rhib
 rhibs=dir(raw_dir);
-rhibs(strcmp({rhibs.name},'.') | strcmp({rhibs.name},'..') | strcmp({rhibs.name},'.DS_Store'))=[];
+rhibs(strcmp({rhibs.name},'.') | strcmp({rhibs.name},'..') | strcmp({rhibs.name},'.DS_Store') | strcmp({rhibs.name},'.AppleDouble') | strcmp({rhibs.name},'._.DS_Store'))=[];
 rhibs(~[rhibs.isdir])=[];
 
 %% Loop through existing files and process any that have not been processed (or reprocess if overwrite=true)
@@ -68,70 +78,98 @@ rhibs(~[rhibs.isdir])=[];
 for i=1:length(rhibs)
     rhibname=rhibs(i).name; 
     deps=dir(fullfile(raw_dir,rhibname));
-    deps=deps(contains({deps.name},'UBOX'));
-    for j=1:length(deps)
-        depname=deps(j).name;
-        rawfile=fullfile(raw_dir,rhibname,depname);
-        procfile=fullfile(proc_dir,rhibname,depname);
-        % Continue if processed file does not already exist or if set to overwrite existing
-        if ~exist(procfile,'dir') || overwrite
-            fprintf(['\nProcessing ' depname '...\n'])
-            data_raw=ParseDeployment(rawfile,parse_nuc_timestamps);
+    deps=deps(contains({deps.name},'deploy'));
+    if ~isempty(deps)
+        for j=1:length(deps)
+            depname=deps(j).name;
+            depfile=fullfile(raw_dir,rhibname,depname);
+            uboxfile=dir(depfile);
+            uboxfile=uboxfile(contains({uboxfile.name},'UBOX'));
+            uboxfile(contains({uboxfile.name},'.'))=[];
+            if ~isempty(uboxfile)
+                uboxname=uboxfile.name;
+    
+                rawfile=fullfile(depfile,uboxname);
+                procfile=fullfile(proc_dir,rhibname,depname,uboxname);
+                % Continue if processed file does not already exist or if set to overwrite existing
+                if ~exist(procfile,'dir') || overwrite
+                    fprintf(['\nProcessing ' depname '...\n'])
+                    data_raw=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp);
+                    if ~isempty(data_raw.adcp.time)
+                    
+                        %put gps in separate file for using with CTD (sorted by time)
+                        %INSTEAD OF THIS, USE UNIQUE() AND THEN DROP THE WIERD DATES
+                        gps=data_raw.gps;
+                        [gps.GPRMC.dn,I]=sort(gps.GPRMC.dn);
+                        gps.GPRMC.lnum=gps.GPRMC.lnum(I);
+                        gps.GPRMC.fnum=gps.GPRMC.fnum(I);
+                        gps.GPRMC.lat=gps.GPRMC.lat(I);
+                        gps.GPRMC.lon=gps.GPRMC.lon(I);
+                        gps.GPRMC.speed=gps.GPRMC.speed(I);
+                        gps.GPRMC.course=gps.GPRMC.course(I);
+                                    
+                        fprintf('Preparing to transform velocities...\n')
+                        yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
+                        if isempty(yaw_offset)
+                            disp(data_raw.adcp.config.serial_number)
+                            error("No match found for instrument serial number. Check values entered in RHIBproc.m.")
+                        end
+                        adcp=ProcADCP(data_raw,yaw_offset,vessel_vel_method,beam5_weight);
+                        fprintf('Transformation complete... saving file...')
+            
+                        if clipAir
+                            adcp=ClipAirTime(adcp);
+                        end
                         
-            fprintf('Preparing to transform velocities...\n')
-            yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
-            if isempty(yaw_offset)
-                disp(data_raw.adcp.config.serial_number)
-                error("No match found for instrument serial number. Check values entered in RHIBproc.m.")
-            end
-            adcp=ProcADCP(data_raw,yaw_offset,vessel_vel_method,beam5_weight);
-            fprintf('Transformation complete... saving file...')
-
-            if clipAir
-                adcp=ClipAirTime(adcp);
-            end
-            
-            % save file
-            filepath=fullfile(proc_dir,rhibname,depname);
-            if ~exist(filepath,'dir')
-                mkdir(filepath)
-            end    
-            save('-v7.3',fullfile(filepath,['adcp_' depname '.mat']),'adcp');
-            
-            % plot some figures
-            fprintf('\nPlotting and saving figures...')
-            plotpath=filepath+"/plots/";
-            if ~exist(plotpath,'dir')
-                mkdir(plotpath)
-            end
-
-            % Map RHIB track
-            mapfig=PlotTrack(adcp,addterm=addterm);
-            exportgraphics(mapfig,plotpath+"map.png")
-            close(mapfig)
-
-            % Beam velocities
-            bvelfig=PlotBeams(adcp,'bvel');
-            exportgraphics(bvelfig,plotpath+"beamvel.png")
-            close(bvelfig)
-
-            % Echo intensities
-            echofig=PlotBeams(adcp,'echo');
-            exportgraphics(echofig,plotpath+"echointensity.png")
-            close(echofig)
-
-            % Correlation
-            corrfig=PlotBeams(adcp,'corr');
-            exportgraphics(corrfig,plotpath+"correlation.png")
-            close(corrfig)
-
-            % ENU velocity
-            ENUfig=PlotENU(adcp);
-            exportgraphics(ENUfig,plotpath+"ENU.png")
-            close(ENUfig)
-            
-            fprintf(['\n' depname ' complete.\n'])
+                        % save file
+                        if ~exist(procfile,'dir')
+                            mkdir(procfile)
+                        end   
+                        save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
+                        save('-v7.3',fullfile(procfile,['adcp_' depname '.mat']),'adcp');
                         
+                        % plot some figures
+                        fprintf('\nPlotting and saving figures...')
+                        plotpath=procfile+"/plots/";
+                        if ~exist(plotpath,'dir')
+                            mkdir(plotpath)
+                        end
+                        
+                        if ~test
+                            % Map RHIB track
+                            mapfig=PlotTrack(adcp);
+                            exportgraphics(mapfig,plotpath+"map.png")
+                            close(mapfig)
+                
+                            % Beam velocities
+                            bvelfig=PlotBeams(adcp,'bvel');
+                            exportgraphics(bvelfig,plotpath+"beamvel.png")
+                            close(bvelfig)
+                
+                            % Echo intensities
+                            echofig=PlotBeams(adcp,'echo');
+                            exportgraphics(echofig,plotpath+"echointensity.png")
+                            close(echofig)
+                
+                            % Correlation
+                            corrfig=PlotBeams(adcp,'corr');
+                            exportgraphics(corrfig,plotpath+"correlation.png")
+                            close(corrfig)
+                        end
+            
+                        % ENU velocity
+                        ENUfig=PlotENU(adcp);
+                        exportgraphics(ENUfig,plotpath+"ENU.png")
+                        close(ENUfig)
+                        
+                        fprintf(['\n' depname ' complete.\n'])
+                    else
+                        fprintf(['\n' depname ' is empty.\n'])
+                    end
+                                
+                end 
+            end 
+
         end %processing this deployment
     end %loop thru deployments
 end %loop thru rhibs

@@ -1,13 +1,20 @@
 % This script allows a user to search through ADCP beam data and locate specific features in space
 clear
-addterm=1; %set to 1 to add Aug 28, 2023 terminus line
+addterm=1; %set to 1 to add terminus line
+
+basepath=[]; %directory where processed data is located
+termfolder='processed/Drone/Mavic3E/terminusPosition/'; %directory where terminus lines are located (should be under basepath)
 
 %% Select a deployment to search
-adcp=LoadDeployment;
+adcp=LoadDeployment(basepath);
+fprintf("\nDeployment begins "+string(datetime(adcp.nuc_time(1),'ConvertFrom','datenum'))+"\n\n")
+%% Select terminus to plot
+if addterm
+    [termfile,termdate,termdt]=AddTerm(basepath,termfolder);
+end
 
 %% Remove rhib velocity from beam velocities
-adcp=rhib_earth2beam(adcp);
-adcp.bvel_water=adcp.bvel+adcp.vessel_vel_bcoords;
+adcp=adcp_earth2beam(adcp);
 
 %% Get locations for each beam observation
 adcp=beamlocations(adcp);
@@ -38,6 +45,7 @@ r=linspace(.99,.05,nb+1); r=r(2:end);
 w1=.5; w2=.35; h1=.9*abs(diff(r(1:2))); h2=.97-r(end-1);
 
 fig=figure('Position',[10 10 2000 1000]);
+
 for i=1:nb
     time=adcp.nuc_time;
     depth=adcp.cell_depth;
@@ -52,11 +60,21 @@ for i=1:nb
     axe(i).Visible='off'; cbar_e.Visible='off';
     ax(i)=axes('Position',[c1 r(i) w1 h1]);
     [h(i),cbar_v]=PlotData(time,depth,vel,i,nb,cmocean('balance'),[-1 1],"Beam Velocity (m/s)");
+    if i==1
+        title(string(datetime(time(1),'ConvertFrom','datenum')))
+    end
 end
 
 ax(nb+1)=axes('Position',[c2 r(end-1) w2 h2]);
+plot(adcp.vessel_lon,adcp.vessel_lat,'LineWidth',1,'Color',[.5 .5 .5])
+hold on
+scatter(adcp.vessel_lon(1),adcp.vessel_lat(1),80,[.4 .4 .4],'filled')
 if LC
-    Draw_LeConteCoastline(addterm)
+    if ~isempty(termfile)
+        Draw_LeConteCoastline(termfile)
+    else
+        Draw_LeConteCoastline()
+    end
     if addterm
         if maxlat<56.84
             maxlat=56.84;
@@ -78,7 +96,7 @@ if LC
     xlim([minlon-xbuff maxlon+xbuff])
     ylim([minlat-ybuff maxlat+ybuff])
 end
-
+text(.95,.95,"Terminus: "+string(termdt),'Units','normalized','HorizontalAlignment','right')
 set(gca,'FontSize',16)
 
 linkaxes([ax(1:nb) axe axc])

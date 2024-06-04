@@ -170,7 +170,7 @@ end
                 adcp.config.sensor_source        = dec2bin(getdat(31,'uint8'),8);
                 adcp.config.sensors_available    = dec2bin(getdat(32,'uint8'),8);
                 adcp.config.bin_1_distance       = getdat(33:34,'uint16')/100;
-                adcp.config.xmit_puse_length     = getdat(35:36,'uint16')/100;
+                adcp.config.xmit_pulse_length    = getdat(35:36,'uint16')/100;
                 adcp.config.wp_ref_layer_avg     = getdat(37:38,'uint8');
                 adcp.config.false_target_thresh  = getdat(39,'uint8');
                 adcp.config.transmit_lag_dist    = getdat(41:42,'uint16')/100;
@@ -263,7 +263,7 @@ end
                 adcp.bt_range = (reshape(bt_range_lsb,4,[]) + 2^16*reshape(bt_range_msb,4,[]))/100;
                 adcp.bt_vel = reshape(getdat(25:32,'int16'),4,[])/1000; % mm/s -> m/s
                 adcp.bt_perc_good = reshape(getdat(41:44,'uint8'),4,[]);
-                adcp.bt_amp = reshape(getdat(41:44,'uint8'),4,[]);
+                adcp.bt_amp = reshape(getdat(37:40,'uint8'),4,[]);
             end
         end
     end % of parse_ensemble_data

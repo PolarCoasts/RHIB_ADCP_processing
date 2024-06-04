@@ -103,7 +103,7 @@ Alternatively, PlotBeams can be run with second positional argument of 'bvel' or
 ### Loading processed data
 LoadDeployment provides a convenient way to look up filenames and load processed data. 
 
-	adcp = LoadDeployment;
+	adcp = LoadDeployment(basepath);
 	
 This will display a numbered list of all processed files contained in the working directory (and subdirectories). Enter the line number of the desired file and the data is loaded into the adcp structure.
 

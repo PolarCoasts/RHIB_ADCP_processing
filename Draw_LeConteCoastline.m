@@ -1,7 +1,7 @@
-function Draw_LeConteCoastline(add_terminus)
+function Draw_LeConteCoastline(termfile)
 
 arguments
-    add_terminus logical=0
+    termfile string=[];
 end
 
 % get coastine
@@ -23,8 +23,15 @@ end
 
 set(gca,'dataaspectratio',[1 cos(2*pi*56.8/360) 1])
 
-if add_terminus
+if isempty(termfile)
     termfile=[filepath '/LeConteTerminusAug282023.kml'];
     term=readgeotable(termfile);
     geoshow(term,"LineWidth",2,'Color','k')
+else
+    term=load(termfile);
+    plot(term.lon,term.lat,'k','LineWidth',2)
+    datesplit=split(termfile,'_');
+    date=datesplit(2);
+    dt=datetime(str2double(date),'ConvertFrom','yyyymmdd');
+    text(-.1,.9,"Terminus as of "+string(dt),'HorizontalAlignment','right')
 end
