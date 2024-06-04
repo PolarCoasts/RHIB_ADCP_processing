@@ -28,7 +28,7 @@ vessel_vel_method = 'GPRMC groundspeed and course';
 % weighting for beam 5 in transforming to earth coordinates
 beam5_weight=1;
 % overwrite existing processed files 
-overwrite=false;
+overwrite=true;
 % automatically trim leading/trailing portion of record collected in air
 clipAir=true;
 % add 8/28/2023 terminus line to map
@@ -97,16 +97,10 @@ for i=1:length(rhibs)
                     data_raw=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp);
                     if ~isempty(data_raw.adcp.time)
                     
-                        %put gps in separate file for using with CTD (sorted by time)
-                        %INSTEAD OF THIS, USE UNIQUE() AND THEN DROP THE WIERD DATES
-                        gps=data_raw.gps;
-                        [gps.GPRMC.dn,I]=sort(gps.GPRMC.dn);
-                        gps.GPRMC.lnum=gps.GPRMC.lnum(I);
-                        gps.GPRMC.fnum=gps.GPRMC.fnum(I);
-                        gps.GPRMC.lat=gps.GPRMC.lat(I);
-                        gps.GPRMC.lon=gps.GPRMC.lon(I);
-                        gps.GPRMC.speed=gps.GPRMC.speed(I);
-                        gps.GPRMC.course=gps.GPRMC.course(I);
+                        %put gps in separate file for using with CTD 
+                        gps.time=data_raw.gps.GPRMC.dn;
+                        gps.lat=data_raw.gps.GPRMC.lat;
+                        gps.lon=data_raw.gps.GPRMC.lon;
                                     
                         fprintf('Preparing to transform velocities...\n')
                         yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
