@@ -28,7 +28,7 @@ vessel_vel_method = 'GPRMC groundspeed and course';
 % weighting for beam 5 in transforming to earth coordinates
 beam5_weight=1;
 % overwrite existing processed files 
-overwrite=true;
+overwrite=false;
 % automatically trim leading/trailing portion of record collected in air
 clipAir=true;
 % add 8/28/2023 terminus line to map
