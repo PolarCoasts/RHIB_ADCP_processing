@@ -1,15 +1,16 @@
 % This script allows a user to search through ADCP beam data and locate specific features in space
 clear
-addterm=1; %set to 1 to add terminus line
 
 basepath=[]; %directory where processed data is located
+
+addterm=1; %set to 1 to add terminus line
 termfolder='processed/Drone/Mavic3E/terminusPosition/'; %directory where terminus lines are located (should be under basepath)
 
 %% Select a deployment to search
 adcp=LoadDeployment(basepath);
-fprintf("\nDeployment begins "+string(datetime(adcp.nuc_time(1),'ConvertFrom','datenum'))+"\n\n")
 %% Select terminus to plot
 if addterm
+    fprintf("\nDeployment begins "+string(datetime(adcp.nuc_time(1),'ConvertFrom','datenum'))+"\n\n")
     [termfile,termdate,termdt]=AddTerm(basepath,termfolder);
 end
 

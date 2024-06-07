@@ -3,9 +3,10 @@ function [adcp,xsect,ctd,folder,filepath]=LoadDeployment(basepath)
 % This function displays an numbered list of processed ADCP files in the working directory and its subdirectories
 % 
 % usage:
-%   adcp = LoadDeployment;
+%   adcp = LoadDeployment(basepath);
 %
 % The user enters the line number for the desired file and it is loaded into the output structure
+% Additional outputs can be used to load transect times/indices, ctd data, and the folder/filepath info for the file
 
 files=dir([basepath '**/adcp_deploy_*.mat']);
 files(contains({files.name},'._'))=[];

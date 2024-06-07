@@ -13,7 +13,7 @@ function adcp=Interactive_LocateBottom(adcp)
 %   9. to start over or to compare contours to full backscatter data, press "Reset Backscatter"
 %       - if "ID Bottom Contours" is pressed after "Reset Backscatter", LocateBottom will be run will full backscatter data (starting over)
 %   10 when desired results have been reached, click "Save and Exit"
-%       - bottom contours will be saved in the output adcp structure
+%       - bottom contours will be saved in the output adcp structure (a new file will not be saved)
 
 
 % calculate backscatter from echo if not already done

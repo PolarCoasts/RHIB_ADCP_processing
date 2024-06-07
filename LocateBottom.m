@@ -6,7 +6,7 @@ arguments
     options.minbs (1,1) double=10       % minimum backscatter value to consider as bottom signal
     options.gap (1,1) double=20         % number of timesteps between identified bottom signal to interpolate over
     options.binjump (1,1) double=5      % difference in depth bins between adjacent bottom signals at which a single point should be assumed erroneous
-    options.meth char {mustBeMember(options.meth,{'spline','pchip','linear'})}="spline"
+    options.meth char {mustBeMember(options.meth,{'spline','pchip','linear'})}="linear"
 end
 
 %if user enters 0 for binjump, assume they meant to allow for any magnitude of jump 

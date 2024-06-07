@@ -31,6 +31,8 @@ beam5_weight=1;
 overwrite=false;
 % automatically trim leading/trailing portion of record collected in air
 clipAir=true;
+% minimum file sizes to process (MB)
+minadcp=8; mingps=1;
 % add 8/28/2023 terminus line to map
 addterm=1;
 % adjust offset angle when searching for good match
@@ -55,7 +57,7 @@ if userinfo~='y'
     return
 end
 
-%% Define file structure and get list of existing files
+%% Define file structure and get list of RHIBs
 raw_dir=[basepath 'raw/'];             %directory containing raw data from UBOX
 if test==1
     proc_dir=[basepath 'processed/adj_' num2str(offset_adj) '/'];
@@ -93,74 +95,116 @@ for i=1:length(rhibs)
                 procfile=fullfile(proc_dir,rhibname,depname,uboxname);
                 % Continue if processed file does not already exist or if set to overwrite existing
                 if ~exist(procfile,'dir') || overwrite
-                    fprintf(['\nProcessing ' depname '...\n'])
-                    data_raw=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp);
-                    if ~isempty(data_raw.adcp.time)
-                    
-                        %put gps in separate file for using with CTD 
-                        gps.time=data_raw.gps.GPRMC.dn;
-                        gps.lat=data_raw.gps.GPRMC.lat;
-                        gps.lon=data_raw.gps.GPRMC.lon;
-                                    
-                        fprintf('Preparing to transform velocities...\n')
-                        yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
-                        if isempty(yaw_offset)
-                            disp(data_raw.adcp.config.serial_number)
-                            error("No match found for instrument serial number. Check values entered in RHIBproc.m.")
-                        end
-                        adcp=ProcADCP(data_raw,yaw_offset,vessel_vel_method,beam5_weight);
-                        fprintf('Transformation complete... saving file...')
-            
-                        if clipAir
-                            adcp=ClipAirTime(adcp);
-                        end
-                        
-                        % save file
-                        if ~exist(procfile,'dir')
-                            mkdir(procfile)
-                        end   
-                        save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
-                        save('-v7.3',fullfile(procfile,['adcp_' depname '.mat']),'adcp');
-                        
-                        % plot some figures
-                        fprintf('\nPlotting and saving figures...')
-                        plotpath=procfile+"/plots/";
-                        if ~exist(plotpath,'dir')
-                            mkdir(plotpath)
-                        end
-                        
-                        if ~test
-                            % Map RHIB track
-                            mapfig=PlotTrack(adcp);
-                            exportgraphics(mapfig,plotpath+"map.png")
-                            close(mapfig)
-                
-                            % Beam velocities
-                            bvelfig=PlotBeams(adcp,'bvel');
-                            exportgraphics(bvelfig,plotpath+"beamvel.png")
-                            close(bvelfig)
-                
-                            % Echo intensities
-                            echofig=PlotBeams(adcp,'echo');
-                            exportgraphics(echofig,plotpath+"echointensity.png")
-                            close(echofig)
-                
-                            % Correlation
-                            corrfig=PlotBeams(adcp,'corr');
-                            exportgraphics(corrfig,plotpath+"correlation.png")
-                            close(corrfig)
-                        end
-            
-                        % ENU velocity
-                        ENUfig=PlotENU(adcp);
-                        exportgraphics(ENUfig,plotpath+"ENU.png")
-                        close(ENUfig)
-                        
-                        fprintf(['\n' depname ' complete.\n'])
-                    else
-                        fprintf(['\n' depname ' is empty.\n'])
+                    % continue with full processing if deployment contains minimum amount of ADCP data
+                    adcpfile=dir([basepath rawfile '/ADCP']);
+                    adcpfile=adcpfile(contains({adcpfile.name},'ADCP_raw'));
+                    adcpsize=0;
+                    for f=1:length(adcpfile)
+                        adcpsize=adcpsize+adcpfile(f).bytes/1e6;
                     end
-                                
+                    if adcpsize>minadcp
+                        fprintf(['\nProcessing ' depname '...\n'])
+                        data_raw=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp);
+                        if ~isempty(data_raw.adcp.time)
+                        
+                            %put gps in separate file for using with other instruments
+                            gps.time=data_raw.gps.GPRMC.dn;
+                            gps.lat=data_raw.gps.GPRMC.lat;
+                            gps.lon=data_raw.gps.GPRMC.lon;
+                                        
+                            fprintf('Preparing to transform velocities...\n')
+                            yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
+                            if isempty(yaw_offset)
+                                disp(data_raw.adcp.config.serial_number)
+                                error("No match found for instrument serial number. Check values entered in RHIBproc.m.")
+                            end
+                            adcp=ProcADCP(data_raw,yaw_offset,vessel_vel_method,beam5_weight);
+                            fprintf('Transformation complete... saving file...')
+                
+                            if clipAir
+                                adcp=ClipAirTime(adcp);
+                            end
+                            
+                            % save file
+                            if ~exist(procfile,'dir')
+                                mkdir(procfile)
+                            end   
+                            save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
+                            save('-v7.3',fullfile(procfile,['adcp_' depname '.mat']),'adcp');
+                            
+                            % plot some figures
+                            fprintf('\nPlotting and saving figures...')
+                            plotpath=procfile+"/plots/";
+                            if ~exist(plotpath,'dir')
+                                mkdir(plotpath)
+                            end
+                            
+                            if ~test
+                                % Map RHIB track
+                                mapfig=PlotTrack(adcp);
+                                exportgraphics(mapfig,plotpath+"map.png")
+                                close(mapfig)
+                    
+                                % Beam velocities
+                                bvelfig=PlotBeams(adcp,'bvel');
+                                exportgraphics(bvelfig,plotpath+"beamvel.png")
+                                close(bvelfig)
+                    
+                                % Echo intensities
+                                echofig=PlotBeams(adcp,'echo');
+                                exportgraphics(echofig,plotpath+"echointensity.png")
+                                close(echofig)
+                    
+                                % Correlation
+                                corrfig=PlotBeams(adcp,'corr');
+                                exportgraphics(corrfig,plotpath+"correlation.png")
+                                close(corrfig)
+                            end
+                
+                            % ENU velocity
+                            ENUfig=PlotENU(adcp);
+                            exportgraphics(ENUfig,plotpath+"ENU.png")
+                            close(ENUfig)
+                            
+                            fprintf(['\n' depname ' complete.\n'])
+                        else
+                            fprintf(['\n' depname ' is empty.\n'])
+                        end
+                    else
+                        % if ADCP data doesn't meet minimum size requirement, check GPS data
+                        % (checking for deployments where the ADCP is turned off, but we still want gps data for other instruments
+                        gpsfile=dir([basepath rawfile '/GPS']);
+                        gpsfile=gpsfile(contains({gpsfile.name},'GPS_2'));
+                        gpssize=0;
+                        for g=1:length(gpsfile)
+                            gpssize=gpssize+gpsfile(g).bytes/1e6;
+                        end
+                        if gpssize>mingps
+                            fprintf(['\nProcessing ' depname '...\n'])
+                            if gps_timestamp
+                                files.gps = dir(fullfile(rawfile,'GPS','GPS_timestamped*.log'));
+                            else
+                                files.gps = dir(fullfile(rawfile,'GPS','GPS_2*.log'));
+                            end
+                            data=struct('gps',[]);
+                            % parse gps data only
+                            if ~isempty(files.gps)
+                                fprintf('ADCP data does not meet minimum file size, parsing and saving GPS only...')
+                                data_raw.gps=parse_gps(files.gps);
+                            end
+                            %put gps in separate file for using with other instruments 
+                            gps.time=data_raw.gps.GPRMC.dn;
+                            gps.lat=data_raw.gps.GPRMC.lat;
+                            gps.lon=data_raw.gps.GPRMC.lon;
+                            %save gps file
+                            if ~exist(procfile,'dir')
+                                mkdir(procfile)
+                            end   
+
+                            save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
+                            fprintf(['\n' depname ' complete.\n'])                            
+                        end
+                    end     
                 end 
             end 
 
