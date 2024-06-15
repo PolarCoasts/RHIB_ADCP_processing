@@ -96,7 +96,7 @@ for i=1:length(rhibs)
                 % Continue if processed file does not already exist or if set to overwrite existing
                 if ~exist(procfile,'dir') || overwrite
                     % continue with full processing if deployment contains minimum amount of ADCP data
-                    adcpfile=dir([basepath rawfile '/ADCP']);
+                    adcpfile=dir([rawfile '/ADCP']);
                     adcpfile=adcpfile(contains({adcpfile.name},'ADCP_raw'));
                     adcpsize=0;
                     for f=1:length(adcpfile)
@@ -173,7 +173,7 @@ for i=1:length(rhibs)
                     else
                         % if ADCP data doesn't meet minimum size requirement, check GPS data
                         % (checking for deployments where the ADCP is turned off, but we still want gps data for other instruments
-                        gpsfile=dir([basepath rawfile '/GPS']);
+                        gpsfile=dir([rawfile '/GPS']);
                         gpsfile=gpsfile(contains({gpsfile.name},'GPS_2'));
                         gpssize=0;
                         for g=1:length(gpsfile)
