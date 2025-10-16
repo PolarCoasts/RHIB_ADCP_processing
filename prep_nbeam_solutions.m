@@ -22,6 +22,7 @@
 % 2022-04-13    Protocol added for dealing with missing data in Beam 5
 % 2022-04-26    Split protocol for 5-beam ADCP into two options (either use beam 5 or use estimate from one of the beam pairs to match vertical velocity)
 %               Save bad_beams as a field in adcp to keep track of which beam scenarios exist
+% 2024-11-17    Add handling of bad 5th beam so that it doesn't just pass NaNs through
 
 function adcp = prep_nbeam_solutions(adcp,opt) 
 
@@ -39,8 +40,7 @@ vb = reshape(permute(adcp.vel,[3 1 2]),nc*nt,nb);
 % 0 0 0 1 1 <-- beams 4 & 5 are bad, etc.
 bmask = isnan(vb);
 
-% Find all combinations of bad beams. These are just the unique rows of the
-% above matrix.
+% Find all combinations of bad beams. These are just the unique rows of the above matrix.
 [bad_beams, ~, type] = unique(bmask,'rows');
 adcp.bad_beam_scenarios=bad_beams;
 
@@ -48,13 +48,11 @@ adcp.bad_beam_scenarios=bad_beams;
 % unique integers by treating these rows as binary numbers:
 id =@(bad_beams) sum(2.^bad_beams); % ** corrected from sum(2.^find(bad_beams)) 04/05/2022 BO **
 
-% Loop over all types of bad beam combinations and fill in masked velocity data
-% where possible.
+% Loop over all types of bad beam combinations and fill in masked velocity data where possible.
 for i = 1:size(bad_beams,1)
     % Get the indices of velocity entries with this type of beam failure
     idx = type == i;
     c = 1/(2*sind(adcp.config.beam_angle));
-
 
     % ====== 3-beam solutions for 4-beam ADCP ====== %
     if nb==4
@@ -142,11 +140,15 @@ for i = 1:size(bad_beams,1)
             %     v5 = c*v3 + c*v4
             % ==> v4 = (v5 - c*v3)/c
             vb(idx,4) = (vb(idx,5) - c*vb(idx,3))/c;
+            
+            % ===== only beam 5 bad ===== %                            
+            case id(5) % only beam 5 bad, set to average Z from beam pairs
+            %     v5 = c/2*(v1+v2+v3+v4)
+            vb(idx,5) = c/2*(vb(idx,1) + vb(idx,2) + vb(idx,3) + vb(idx,4));
 
             % ====== 2 side beams bad ====== %
-            % Because we can handle a single bad beam from the 1&2 beam pair and the
-            % 3&4 beam pair independently, we can also handle cases where a single
-            % beam is bad for both pairs:
+            % Because we can handle a single bad beam from the 1&2 beam pair and the 3&4 beam pair independently, 
+            % we can also handle cases where a single beam is bad for both pairs:
 
             case id([1,3]) % beams 1 & 3 bad
             %     v5 = c*v1 + c*v2
@@ -180,8 +182,37 @@ for i = 1:size(bad_beams,1)
             % ==> v4 = (v5 - c*v3)/c
             vb(idx,4) = (vb(idx,5) - c*vb(idx,3))/c;
 
-            end
+            % ===== 1 side beam bad and beam 5 bad ===== %
+            % we must force a traditional 3-beam solution and also calculate beam 5
+            case id([1,5]) % beams 1 & 5 bad 
+            % c*v1 + c*v2 = c*v3 + c*v4
+            % ===>     v1 = v3 + v4 - v2
+            vb(idx,1) = vb(idx,3) + vb(idx,4) - vb(idx,2);
+            % v5 = c*v3 + c*v4
+            vb(idx,5) = vb(idx,3) + vb(idx,4);
             
+            case id([2,5])  % only beam 2 bad 
+            % c*v1 + c*v2 = c*v3 + c*v4
+            % ===>     v2 = v3 + v4 - v1
+            vb(idx,2) = vb(idx,3) + vb(idx,4) - vb(idx,1);
+            % v5 = c*v3 + c*v4
+            vb(idx,5) = vb(idx,3) + vb(idx,4);
+
+            case id([3,5]) % only beam 3 bad 
+            % c*v1 + c*v2 = c*v3 + c*v4
+            % ===>     v3 = v1 + v2 - v4
+            vb(idx,3) = vb(idx,1) + vb(idx,2) - vb(idx,4);
+            % v5 = c*v1 + c*v2
+            vb(idx,5) = vb(idx,1) + vb(idx,2);
+
+            case id([4,5]) % only beam 4 bad 
+            % c*v1 + c*v2 = c*v3 + c*v4
+            % ===>     v4 = v1 + v2 - v3
+            vb(idx,4) = vb(idx,1) + vb(idx,2) - vb(idx,3);
+            % v5 = c*v2 + c*v2
+            vb(idx,5) = vb(idx,1) + vb(idx,2);
+            end
+           
         elseif opt==2 %set Z equal to estimate from other pair, let NaNs feed through if one beam from each pair is bad
             switch id(find(bad_beams(i,:)))
 
@@ -229,10 +260,10 @@ for i = 1:size(bad_beams,1)
             % ===>     v4 = v1 + v2 - v3
             vb(idx,4) = vb(idx,1) + vb(idx,2) - vb(idx,3);
 
-%             % ===== Beam 5 bad ===== %                            %This is not necessary since we are going to make several estimates of w
-%             case id(5) % only beam 5 bad, set to average Z from beam pairs
-%             %     v5 = c/2*(v1+v2+v3+v4)
-%             vb(idx,5) = c/2*(vb(idx,1) + vb(idx,2) + vb(idx,3) + vb(idx,4));
+            % ===== Beam 5 bad ===== %                            
+            case id(5) % only beam 5 bad, set to average Z from beam pairs
+            %     v5 = c/2*(v1+v2+v3+v4)
+            vb(idx,5) = c/2*(vb(idx,1) + vb(idx,2) + vb(idx,3) + vb(idx,4));
 
             end
             

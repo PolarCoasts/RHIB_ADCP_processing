@@ -18,11 +18,9 @@ clear
 
 % ========== Processing options =========================================================
 % set basepath to directory containing 'raw/' (leave empty to use working directory)
-basepath=[];
+basepath='/Users/ovall/Documents/Rutgers/Research/LeConteData2023/data/';
 % use nuc time
 parse_nuc_timestamps=true;
-% use nuc time for gps, too
-gps_timestamp=false;
 % how to handle ship motion
 vessel_vel_method = 'GPRMC groundspeed and course';
 % weighting for beam 5 in transforming to earth coordinates
@@ -32,7 +30,7 @@ overwrite=false;
 % automatically trim leading/trailing portion of record collected in air
 clipAir=true;
 % minimum file sizes to process (MB)
-minadcp=8; mingps=1;
+minadcp=3; mingps=1;
 % add 8/28/2023 terminus line to map
 addterm=1;
 % adjust offset angle when searching for good match
@@ -104,15 +102,51 @@ for i=1:length(rhibs)
                     end
                     if adcpsize>minadcp
                         fprintf(['\nProcessing ' depname '...\n'])
-                        data_raw=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp);
+                        data_raw=ParseDeployment(rawfile,parse_nuc_timestamps);
                         if ~isempty(data_raw.adcp.time)
                         
                             %put gps in separate file for using with other instruments
                             gps.time=data_raw.gps.GPRMC.dn;
                             gps.lat=data_raw.gps.GPRMC.lat;
                             gps.lon=data_raw.gps.GPRMC.lon;
-                                        
+                            gps.vel(:,1)=data_raw.gps.GPRMC.speed.*sind(data_raw.gps.GPRMC.course);
+                            gps.vel(:,2)=data_raw.gps.GPRMC.speed.*cosd(data_raw.gps.GPRMC.course);
+                            gps.speed=data_raw.gps.GPRMC.speed;
+                            gps.course=data_raw.gps.GPRMC.course;
+                            if isfield(data_raw.gps,'nuc_time')
+                                gps.nuc_start_time=data_raw.gps.nuc_time(1);
+                            end
+                            gps.QC.time=data_raw.gps.GPGGA.dn+floor(gps.time(1)); %time for GPGGA field (this will be goofy if deployment crosses days)
+                            gps.QC.qual=data_raw.gps.GPGGA.qual; %quality indicator
+                            gps.QC.num=data_raw.gps.GPGGA.num; %number of satellites
+                            gps.QC.hdop=data_raw.gps.GPGGA.hdop; %horizontal dilution of precision
+                            gps.QC.aod=data_raw.gps.GPGGA.aod; %age of differential corrections
+
+                            % save file
+                            if ~exist(procfile,'dir')
+                                mkdir(procfile)
+                            end   
+                            save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
+                            clear gps
+
+                            imu=data_raw.imu;
+                            save('-v7.3',fullfile(procfile,['imu_' depname '.mat']),'imu')
+
                             fprintf('Preparing to transform velocities...\n')
+                            %if nuc_time does not match GPS time, user must decide whether to proceed or not
+                            if isfield(data_raw,'warning')
+                                warning(data_raw.warning)
+                                userinfo=input("\nDo you wish to continue? (y/n)",'s');
+                                if isempty(userinfo)
+                                    userinfo='n';
+                                end
+                                if userinfo~='y'
+                                    warning("ADCP processing has been aborted. GPS data has been saved with nuc start time. Use adcp parsing function seperately and correct nuc_time to match gps time")
+                                    return
+                                else
+                                    warning("Processing will proceed with incorrect nuc_time. GPS data will be misaligned. nuc_time should be corrected and GPS reinterpolated")
+                                end
+                            end
                             yaw_offset=offset(serial==data_raw.adcp.config.serial_number);
                             if isempty(yaw_offset)
                                 disp(data_raw.adcp.config.serial_number)
@@ -125,11 +159,6 @@ for i=1:length(rhibs)
                                 adcp=ClipAirTime(adcp);
                             end
                             
-                            % save file
-                            if ~exist(procfile,'dir')
-                                mkdir(procfile)
-                            end   
-                            save('-v7.3',fullfile(procfile,['gps_' depname '.mat']),'gps')
                             save('-v7.3',fullfile(procfile,['adcp_' depname '.mat']),'adcp');
                             
                             % plot some figures

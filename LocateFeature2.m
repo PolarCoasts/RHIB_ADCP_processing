@@ -1,42 +1,16 @@
-% This script allows a user to search through ADCP beam data and locate specific features in space
-clear
+function [ax,axc,axe]=LocateFeature2(adcp,term)
+%This is similar to the script LocateFeature, but set up for use during post-processing
+%   it is expected that adcp_earth2beam and CalculateBeamLocations have already been run on input adcp
 
-basepath=[]; %directory where processed data is located
+%set new origin (these numbers are based on 2018 terminus location)
+xorig=661423.22262933;
+yorig=6301938.85082928;
 
-addterm=1; %set to 1 to add terminus line
-termfolder='processed/Drone/LeconteTerminus/'; %directory where terminus lines are located (should be under basepath)
+trackx=adcp.vessel_X-xorig;
+tracky=adcp.vessel_Y-yorig;
 
-%% Select a deployment to search
-adcp=LoadDeployment(basepath);
-%% Select terminus to plot
-if addterm
-    fprintf("\nDeployment begins "+string(datetime(adcp.nuc_time(1),'ConvertFrom','datenum'))+"\n\n")
-    [termfile,termdate,termdt]=AddTerm(basepath,termfolder);
-end
-
-%% Remove rhib velocity from beam velocities
-adcp=adcp_earth2beam(adcp);
-
-%% Get locations for each beam observation
-adcp=beamlocations(adcp);
-
-%% Determine if data is from LeConte (to draw coastline on map)
-% different variable names were used with different versions of processing code
-if isfield(adcp,'gps')
-    lon=adcp.gps.lon;
-    lat=adcp.gps.lat;
-else
-    lon=adcp.vessel_lon;
-    lat=adcp.vessel_lat;
-end
-
-minlon=min(lon,[],'omitnan'); maxlon=max(lon,[],'omitnan');
-minlat=min(lat,[],'omitnan'); maxlat=max(lat,[],'omitnan');
-if minlon>-133 && maxlon<-132 && minlat>56 && maxlat<57
-    LC=1;
-else
-    LC=0;
-end
+termx=term.X-xorig;
+termy=term.Y-yorig;
 
 %% Display an interactive plot
 nb=adcp.config.n_beams;
@@ -45,7 +19,7 @@ c1=.05; c2=.6;
 r=linspace(.99,.05,nb+1); r=r(2:end);
 w1=.5; w2=.35; h1=.9*abs(diff(r(1:2))); h2=.97-r(end-1);
 
-fig=figure('Position',[10 10 2000 1000]);
+fig=figure('Position',[10 10 2200 1200]);
 
 for i=1:nb
     time=adcp.nuc_time;
@@ -67,47 +41,23 @@ for i=1:nb
 end
 
 ax(nb+1)=axes('Position',[c2 r(end-1) w2 h2]);
-plot(adcp.vessel_lon,adcp.vessel_lat,'LineWidth',1,'Color',[.5 .5 .5])
+plot(trackx,tracky,'LineWidth',1,'Color',[.5 .5 .5])
 hold on
-scatter(adcp.vessel_lon(1),adcp.vessel_lat(1),80,[.4 .4 .4],'filled')
-if LC
-    if ~isempty(termfile)
-        Draw_LeConteCoastline(termfile)
-    else
-        Draw_LeConteCoastline()
-    end
-    if addterm
-        if maxlat<56.84
-            maxlat=56.84;
-        end
-        if maxlon<-132.35
-            maxlon=-132.36;
-        end
-    end
-    % do some calculations to make sure there's plenty of map space
-    lonext=maxlon-minlon;
-    latext=maxlat-minlat;
-    if lonext<2*latext
-        xf=.4;
-    else
-        xf=.2;
-    end
-    xbuff=(lonext)*xf;
-    ybuff=(latext)*.2;
-    xlim([minlon-xbuff maxlon+xbuff])
-    ylim([minlat-ybuff maxlat+ybuff])
-end
-text(.95,.95,"Terminus: "+string(termdt),'Units','normalized','HorizontalAlignment','right')
-set(gca,'FontSize',16)
+scatter(trackx(1),tracky(1),80,[.4 .4 .4],'filled')
+plot(termx,termy,'b','LineWidth',2)
+
+xlim([-1200 -200])
+ylim([-500 1000])
+axis equal
 
 linkaxes([ax(1:nb) axe axc])
 drawnow
 for i=1:nb
-    blat=squeeze(adcp.beam_loc_lat(:,i,:));
-    blon=squeeze(adcp.beam_loc_lon(:,i,:));
-    h(i).ButtonDownFcn={@ClickData blat blon ax(nb+1)};
-    he(i).ButtonDownFcn={@ClickData blat blon ax(nb+1)};
-    hc(i).ButtonDownFcn={@ClickData blat blon ax(nb+1)};
+    by=squeeze(adcp.beam_locations(:,i,:,2))-yorig;
+    bx=squeeze(adcp.beam_locations(:,i,:,1))-xorig;
+    h(i).ButtonDownFcn={@ClickData by bx ax(nb+1)};
+    he(i).ButtonDownFcn={@ClickData by bx ax(nb+1)};
+    hc(i).ButtonDownFcn={@ClickData by bx ax(nb+1)};
 end
 
 ClearPointsBTN=uicontrol(fig,'String','Clear Points','Callback',{@ClearPoints ax(nb+1) ax(1:nb) axe axc},'Position',[1580 150 120 40],'FontSize',16);
@@ -138,15 +88,15 @@ function [h,cbar]=PlotData(time,depth,data,i,nb,cmap,vlim,clabel)
     set(gca,'FontSize',16)
 end
 
-function pt=ClickData(obj,event,blat,blon,mapax)
+function pt=ClickData(obj,event,by,bx,mapax)
     x=obj.XData;
     y=obj.YData;
     pt=event.IntersectionPoint;
     [~,xi]=min(abs(pt(1)-x));
     [~,yi]=min(abs(pt(2)-y));
-    sel_lat=blat(yi,xi);
-    sel_lon=blon(yi,xi);
-    scatter(mapax,sel_lat,sel_lon,80,'r','filled')
+    sel_x=bx(yi,xi);
+    sel_y=by(yi,xi);
+    scatter(mapax,sel_x,sel_y,80,'r','filled')
     delete(findall(gca,'Type','hggroup'))
 end
 
@@ -200,5 +150,5 @@ function SwitchData(src,event,ax,axe,axc,h,he,hc,cbar,cbar_e,cbar_c)
 end
 
 
-
+end
 

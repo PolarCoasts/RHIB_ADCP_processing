@@ -1,6 +1,6 @@
 function [termfile,termdate,termdt]=AddTerm(basepath,termfolder)
 
-termfiles=dir([basepath termfolder '*.mat']);
+termfiles=dir([basepath termfolder '**/*.mat']);
 termfiles(contains({termfiles.name},'._'))=[];
 termfilenames={termfiles.name};
 prompt="Enter the line number for the terminus file you wish to use\n";
@@ -16,8 +16,8 @@ if isempty(ii)
     termdate=[];
     termdt=[];
 else
-    termfile=fullfile(basepath,termfolder,termfilenames{ii});
+    termfile=fullfile(termfiles(ii).folder,termfiles(ii).name);
     termdate=split(termfilenames{ii},'_');
     termdate=termdate{2};
-    termdt=datetime(termdate,'InputFormat','yyyyMMdd');
+    termdt=datetime(termdate,'InputFormat','MMddyyyy');
 end

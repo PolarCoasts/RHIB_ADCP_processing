@@ -18,6 +18,8 @@ switch proc_method
     vessel_vel.vel(:,2) = data.gps.GPRMC.speed(iu) .* sind(90-data.gps.GPRMC.course(iu)); % N/S vel
     vessel_vel.lat = data.gps.GPRMC.lat(iu);
     vessel_vel.lon = data.gps.GPRMC.lon(iu);
+    vessel_vel.speed=data.gps.GPRMC.speed(iu);
+    vessel_vel.course=data.gps.GPRMC.course(iu);
 
   case 'GPRMC distance/time'
     [vessel_vel.time,iu] = unique(data.gps.GPRMC.dn);

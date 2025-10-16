@@ -1,6 +1,6 @@
 function [adcp,xsect,ctd,folder,filepath]=LoadDeployment(basepath)
 
-% This function displays an numbered list of processed ADCP files in the working directory and its subdirectories
+% This function displays an numbered list of processed ADCP files in the basepath directory and its subdirectories
 % 
 % usage:
 %   adcp = LoadDeployment(basepath);
@@ -46,7 +46,10 @@ ctdfolder=string(join(ctdfolder(1:end-2),'/'));
 ctdfolder=[convertStringsToChars(ctdfolder) '/CTD/'];
 if exist(ctdfolder,'dir')
     ctdfile=dir([ctdfolder '*.mat']);
-    load(fullfile(ctdfile.folder,ctdfile.name));
+    ctdfile(startsWith({ctdfile.name},'._'))=[];
+    ctdfile(endsWith({ctdfile.name},'_AriesPolly.mat'))=[];
+    ctd=load(fullfile(ctdfile.folder,ctdfile.name));
+    ctd=ctd.ctd;
 else
     ctd=[];
 end

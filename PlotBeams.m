@@ -1,47 +1,72 @@
-function [fig,ax]=PlotBeams(adcp,var,vlim)
+function [fig,ax]=PlotBeams(adcp,var,vlim,ii)
 
 arguments
     adcp struct
-    var string {mustBeMember(var,{'bvel','corr','echo'})}   %variable to plot
+    var string {mustBeMember(var,{'bvel','corr','echo','bvel_water','back'})}   %variable to plot
     vlim (1,2) double=[NaN NaN];                            %colorbar limits (defaults are set for each variable below)
+    ii (1,:) double=[];
 end
 
 % This function plots raw beam data
 % 
 % usage:
-%   [fig,ax] = PlotBeams(adcp,var,vlim)
+%   [fig,ax] = PlotBeams(adcp,var,vlim,ii)
 %
-% var is the variable to be plotted ('bvel', 'corr', or 'echo')
+% var is the variable to be plotted ('bvel', 'corr', 'echo', or 'bvel_water')
 % vlim is the limits for the colorbar
 %   this input is optional as there are defaults set for each variable
 
+if isempty(ii)
+    ii=1:length(adcp.bvel(1,1,:));
+end
+
 if strcmp(var,'bvel')
-    data=adcp.bvel;
+    data=adcp.bvel(:,:,ii);
     cmap=cmocean('balance');
     clabel='Beam Velocity (m/s)';
     if all(isnan(vlim))
         vlim=[-1 1];
     end
 elseif strcmp(var,'corr')
-    data=adcp.corr;
+    data=adcp.corr(:,:,ii);
     cmap='parula';
     clabel='Correlation';
     if all(isnan(vlim))
         vlim=[64 128];
     end
 elseif strcmp(var,'echo')
-    data=adcp.echo_intens;
+    data=adcp.echo_intens(:,:,ii);
     cmap='parula';
     clabel='Echo Intensity';
     if all(isnan(vlim))
         vlim=[50 200];
     end
+elseif strcmp(var,'bvel_water')
+    data=adcp.bvel_water(:,:,ii);
+    cmap=cmocean('balance');
+    clabel=["Beam Velocity (m/s)"; "(boat velocity removed)"];
+    if all(isnan(vlim))
+        vlim=[-1 1];
+    end
+elseif strcmp(var,'back')
+    data=adcp.backscatter(:,:,ii);
+    cmap='parula';
+    clabel='Backscatter (dB)';
+    if all(isnan(vlim))
+        vlim=[-60 60];
+    end
 end
 
+%mask bottom
+% if isfield(adcp,'bottom_mask')
+%     mask=adcp.bottom_mask(:,:,ii);
+%     data=data.*mask;
+% end
+
 if isfield(adcp,'nuc_time')
-    time=adcp.nuc_time;
+    time=adcp.nuc_time(ii);
 else
-    time=adcp.time;
+    time=adcp.time(ii);
 end
 
 n=adcp.config.n_beams;

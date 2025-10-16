@@ -24,7 +24,7 @@ end
 %% Get vessel motion from GPS
 % velocity
 vessel_vel0=compute_vessel_vel(data,vessel_vel_method);
-flds={'lon','lat','vel'};
+flds={'lon','lat','vel','speed','course'};
 for i=1:length(flds)
     adcp.(['vessel_' flds{i}])=interp1(vessel_vel0.time,vessel_vel0.(flds{i}),time);
 end

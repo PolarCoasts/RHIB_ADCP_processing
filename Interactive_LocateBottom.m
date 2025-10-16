@@ -1,4 +1,4 @@
-function adcp=Interactive_LocateBottom(adcp)
+function adcp=Interactive_LocateBottom(adcp,n)
 % this function allows the user to omit regions of backscatter data that get erroneously identified as a bottom signal
 %   1. when function is run, an interactive figure will appear
 %   2. set input values for LocateBottom in boxes at the top
@@ -14,16 +14,16 @@ function adcp=Interactive_LocateBottom(adcp)
 %       - if "ID Bottom Contours" is pressed after "Reset Backscatter", LocateBottom will be run will full backscatter data (starting over)
 %   10 when desired results have been reached, click "Save and Exit"
 %       - bottom contours will be saved in the output adcp structure (a new file will not be saved)
-
+% ** n is monitor number to display figure on **
 
 % calculate backscatter from echo if not already done
 if ~isfield(adcp,'backscatter')
     adcp=Echo2Backscatter(adcp);
 end
 
-adcp=PlotBackscatter(adcp);
+adcp=PlotBackscatter(adcp,n);
 
-    function adcp=PlotBackscatter(adcp)
+    function adcp=PlotBackscatter(adcp,n)
         nb=adcp.config.n_beams;
         time=adcp.nuc_time;
         depth=adcp.cell_depth;
@@ -33,9 +33,8 @@ adcp=PlotBackscatter(adcp);
         w1=.8; h1=.9*abs(diff(r(1:2))); 
 
         mp=get(0,'MonitorPositions');
-        n=size(mp,1);
 
-        fig=uifigure('Position',[mp(n,1) .9*mp(n,2) .75*mp(n,3) .9*mp(n,4)]);
+        fig=uifigure('Position',mp(n,:));
 
         bslim=[floor(min(adcp.backscatter,[],'all','omitnan')) ceil(max(adcp.backscatter,[],'all','omitnan'))];
         

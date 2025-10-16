@@ -1,4 +1,4 @@
-function data=ParseDeployment(rawfile,parse_nuc_timestamps,gps_timestamp)
+function data=ParseDeployment(rawfile,parse_nuc_timestamps)
 % This function parses data from raw IMU, ADCP, and GPS files. 
 % It is called by RHIBproc, but can also be used independently
 % usage:
@@ -10,10 +10,9 @@ files.adcp = dir(fullfile(rawfile,'ADCP','*ADCP_timestamped*.bin'));
 files.imu = dir(fullfile(rawfile,'IMU','IMU_timestamped*.bin'));
 isNortek = all(startsWith({files.adcp.name},'Nortek'));
 
-% working on option to include nuc timestamps for GPS (not yet functional)
-if gps_timestamp
-    files.gps = dir(fullfile(rawfile,'GPS','GPS_timestamped*.log'));
-else
+% grab the gps file with timestamps. If it doesn't exist, grab the regular one.
+files.gps = dir(fullfile(rawfile,'GPS','GPS_timestamped*.log'));
+if isempty(files.gps)
     files.gps = dir(fullfile(rawfile,'GPS','GPS_2*.log'));
 end
 
@@ -44,7 +43,17 @@ end
 if ~isempty(files.gps)
     fprintf('GPS...')
     data.gps=parse_gps(files.gps);
+    %if we have good timestamps, we can check for a clock mis-match
+    if isfield(data.gps,'nuc_time')
+        time_diff=abs(data.gps.nuc_time.dn(1)-data.gps.GPRMC.dn(1))*86400;
+        if time_diff>1
+            data.warning="nuc time is off by "+time_diff+" s";
+            warning(data.warning)
+        end
+    end
 end
+
+
 
 fprintf('\nData parsing complete...\n')
 

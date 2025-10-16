@@ -8,6 +8,7 @@ arguments
     criteria.turn (1,1) double=0            % turn rate threshold
     criteria.corr_echo (1,2) double=[0 0]   % thresholds for correlation and echo intensity to be used together, packed as [corr echo]
     criteria.corr_back (1,2) double=[0 0]   % thresholds for correlation and backscatter to be used together, packed as [corr back]
+    criteria.flag (1,1) double=-32.768      % value that instrument internal quality control uses as a flag for bad data
 end
 
 si=size(data.bvel);
@@ -15,6 +16,11 @@ nb=data.config.n_beams;
 depth=data.cell_depth;
 time=data.nuc_time;
 dgrid=repmat(depth,[1 length(time)]);
+
+%always create mask for flagged data (internal QC)
+bvel=data.bvel;
+flag_mask=ones(si);
+flag_mask(bvel==criteria.flag)=NaN;
 
 %cross-beam contamination mask
 if criteria.xbeam==1
@@ -79,7 +85,8 @@ if sum(criteria.corr_back)>0
 end
 
 %combine masks
-maskinfo.combo_mask=xb_mask.*bt_mask.*corr_mask.*turn_mask.*corec_mask.*corbac_mask;
+maskinfo.combo_mask=flag_mask.*xb_mask.*bt_mask.*corr_mask.*turn_mask.*corec_mask.*corbac_mask;
+maskinfo.flag_mask=flag_mask;
 maskinfo.xb_mask=xb_mask;
 maskinfo.exbot_mask=bt_mask;
 maskinfo.corr_mask=corr_mask;
